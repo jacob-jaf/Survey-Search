@@ -1,5 +1,5 @@
-# from transformers import AutoTokenizer, RoFormerTokenizerFast, RoFormerTokenizer, RoFormerModel, RoFormerConfig
-# import torch
+from transformers import AutoTokenizer, RoFormerTokenizerFast, RoFormerTokenizer, RoFormerModel, RoFormerConfig
+import torch
 
 from sentence_transformers import SentenceTransformer, util
 import pandas as pd
@@ -12,8 +12,15 @@ import pandas as pd
 
 # last_hidden_states = outputs.last_hidden_state
 
-model = SentenceTransformer('paraphrase-mpnet-base-v2')
 
 ces_questions = pd.read_csv(
-    '~/Documents/Scraper_Surveys/ces_shiny_data.csv'
+    'data/ces_shiny_data.csv'
 )
+ces_questions['question_only'] = ces_questions['Text'].str.split('<').str[0]
+
+#get the entire column:
+ces_questions['question_only']
+
+model = SentenceTransformer('paraphrase-mpnet-base-v2')
+embeddings = model.encode(ces_questions['question_only'])
+

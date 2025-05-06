@@ -77,6 +77,6 @@ except Exception as e:
 finally:
     driver.close()
 
-r = requests.get()
-soup = bs4.BeautifulSoup(r.content, "html.parser")
+# r = requests.get()
+# soup = bs4.BeautifulSoup(r.content, "html.parser")
 
