@@ -5,6 +5,8 @@ from sentence_transformers import SentenceTransformer, util
 import pandas as pd
 from pathlib import Path
 import numpy as np
+from dataclasses import dataclass
+
 
 #os.path.dirname(os.path.abspath(__file__))
 #Path(__name__).resolve()
@@ -18,7 +20,7 @@ import numpy as np
 
 
 ces_questions = pd.read_csv(
-    'data/ces_shiny_data.csv'
+    'Survey-Search/data/ces_shiny_data.csv'
 )
 ces_questions['question_only'] = ces_questions['Text'].str.split('<').str[0]
 
@@ -44,3 +46,17 @@ test_matches = ces_questions['question_only'].iloc[test_indices[0]].values
 ces_questions[ces_questions['Topic'] == 'Foreign policy']
 np.where(test_indices[0] == 2424)
 ces_questions['question_only'].iloc[test_indices[0][range(680, 690)]]
+
+
+@dataclass
+class ces_sentencer:
+    transformer_name: str
+    transformer_load: bool
+
+    def load_transformer(self, transformer_name:str, transformer_load:bool):
+        if transformer_load:
+            if :
+                out_path = Path('tokenizers/')
+                with open(out_path / f'{in_path.stem}_vocab.pkl', 'wb') as f:
+                    pickle.dump(tokenizer.vocab, f)
+
