@@ -6,6 +6,9 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 from dataclasses import dataclass
+import os
+import pickle
+import time
 
 
 #os.path.dirname(os.path.abspath(__file__))
@@ -18,9 +21,25 @@ from dataclasses import dataclass
 
 # last_hidden_states = outputs.last_hidden_state
 
+with open('tokenizers/paraphrase-mpnet-base-v2.pkl', 'wb') as file:
+    pickle.dump(ces_model, file)
+
+start1 = time.time()
+with open('tokenizers/paraphrase-mpnet-base-v2.pkl' , 'rb') as f:
+    ces1 = pickle.load(f) 
+end1 = time.time()
+
+start2 = time.time()
+ces2 = SentenceTransformer('paraphrase-mpnet-base-v2')
+end2 = time.time()
+
+print(f'pickle took {end1 - start1} seconds')
+print(f'SentenceTransformer took {end2 - start2} seconds')
+
+
 
 ces_questions = pd.read_csv(
-    'Survey-Search/data/ces_shiny_data.csv'
+    'data/ces_shiny_data.csv'
 )
 ces_questions['question_only'] = ces_questions['Text'].str.split('<').str[0]
 
@@ -52,11 +71,40 @@ ces_questions['question_only'].iloc[test_indices[0][range(680, 690)]]
 class ces_sentencer:
     transformer_name: str
     transformer_load: bool
+    transformer_model = SentenceTransformer | None
 
+    @classmethod
     def load_transformer(self, transformer_name:str, transformer_load:bool):
+        """
+        We want to save transformer objects using pickle, 
+        then load them so we don't need to run a tranformer 
+        every time
+        """
         if transformer_load:
-            if :
-                out_path = Path('tokenizers/')
-                with open(out_path / f'{in_path.stem}_vocab.pkl', 'wb') as f:
-                    pickle.dump(tokenizer.vocab, f)
+            out_path_tokenizers = Path('tokenizers/') / f'{transformer_name}.pkl'
+            if out_path.is_file():
+                with open(out_path , 'rb') as f:
+                    transformer_model = pickle.load(f)
+            else:
+                raise FileNotFoundError('The specified tokenizer is not present in the folder for pre-trained tokenizers. Available tokenizers are: '.join(os.listdir('tokenizers')))
+        else:
+            transformer_model = train_transformer(transformer_name)
+        return cls(transformer_name, transformer_load, transformer_model)
 
+    @classmethod
+    def train_transformer(self, transformer_name:str):
+        """When we don't have a sentence transformer model already, we need to add one
+
+        Args:
+            transformer_name (str): name of the desired model
+        """
+        transformer_model = SentenceTransformer(transformer_name)
+        return cls(transformer_name, transformer_load, transformer_model)
+
+    def write_transformer(self, transformer_name:str, transformer_model: SentenceTransformer | None)
+        """
+        We may need to save new model
+        """
+        write_path = out_path = Path('tokenizers/') / f'{transformer_name}.pkl'
+        with open(write_path, 'wb') as f:
+            pickle.dump(transformer_model, f)

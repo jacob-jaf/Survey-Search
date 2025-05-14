@@ -174,3 +174,5 @@ cython_debug/
 .pypirc
 
 #DO NOT INCLUDE DATA AND TOKENIZERS, TOO BIG
+/data
+/tokenizers
