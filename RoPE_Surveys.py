@@ -21,20 +21,20 @@ import time
 
 # last_hidden_states = outputs.last_hidden_state
 
-with open('tokenizers/paraphrase-mpnet-base-v2.pkl', 'wb') as file:
-    pickle.dump(ces_model, file)
+# with open('tokenizers/paraphrase-mpnet-base-v2.pkl', 'wb') as file:
+#     pickle.dump(ces_model, file)
 
-start1 = time.time()
-with open('tokenizers/paraphrase-mpnet-base-v2.pkl' , 'rb') as f:
-    ces1 = pickle.load(f) 
-end1 = time.time()
+# start1 = time.time()
+# with open('tokenizers/paraphrase-mpnet-base-v2.pkl' , 'rb') as f:
+#     ces1 = pickle.load(f) 
+# end1 = time.time()
 
-start2 = time.time()
-ces2 = SentenceTransformer('paraphrase-mpnet-base-v2')
-end2 = time.time()
+# start2 = time.time()
+# ces2 = SentenceTransformer('paraphrase-mpnet-base-v2')
+# end2 = time.time()
 
-print(f'pickle took {end1 - start1} seconds')
-print(f'SentenceTransformer took {end2 - start2} seconds')
+# print(f'pickle took {end1 - start1} seconds')
+# print(f'SentenceTransformer took {end2 - start2} seconds')
 
 
 
@@ -71,10 +71,26 @@ ces_questions['question_only'].iloc[test_indices[0][range(680, 690)]]
 class ces_sentencer:
     transformer_name: str
     transformer_load: bool
-    transformer_model = SentenceTransformer | None
+    transformer_model: SentenceTransformer | None
+    transformer_embeddings: np.ndarray | None
+    embeddings_load: bool
+    model_embedings: np.ndarray
 
-    @classmethod
-    def load_transformer(self, transformer_name:str, transformer_load:bool):
+
+    def __init__(self, transformer_name: str, transformer_load: bool = True, embeddings_load: bool = True):
+        self.transformer_name = transformer_name
+        self.transformer_load = transformer_load
+        self.tranformer_model = load_transformer()
+        self.transformer_embeddings = load_em
+
+        self.vocab = vocab
+        self.merges = merges
+        if special_tokens is None:
+            special_tokens = []
+        self.rust_tokenizer = RustTokenizer(vocab, merges, special_tokens)
+
+
+    def load_transformer(self):
         """
         We want to save transformer objects using pickle, 
         then load them so we don't need to run a tranformer 
@@ -82,24 +98,56 @@ class ces_sentencer:
         """
         if transformer_load:
             out_path_tokenizers = Path('tokenizers/') / f'{transformer_name}.pkl'
-            if out_path.is_file():
-                with open(out_path , 'rb') as f:
+            if out_path_tokenizers.is_file():
+                with open(out_path_tokenizers , 'rb') as f:
                     transformer_model = pickle.load(f)
             else:
                 raise FileNotFoundError('The specified tokenizer is not present in the folder for pre-trained tokenizers. Available tokenizers are: '.join(os.listdir('tokenizers')))
         else:
             transformer_model = train_transformer(transformer_name)
-        return cls(transformer_name, transformer_load, transformer_model)
+        return transformer_model
 
-    @classmethod
-    def train_transformer(self, transformer_name:str):
+
+    def load_embeddings(self, transformer_name:str, embeddings_load:bool, embeddings_text:pd.core.series.Series):
+        """Load or train embeddings
+
+        Args:
+            transformer_name (_type_): Base the expected path for the embeddings on the name of the transformer using
+            embeddings_load (_type_): Whether we expect to load saved embeddings or generate them ourselves
+
+        Returns:
+            We're updating the embeddings object
+        """
+        if embeddings_load:
+            out_path_embeddings = Path('embeddings/') / f'{transformer_name}.pkl'
+            if out_path_embeddings.is_file():
+                with open(out_path_embeddings , 'rb') as f:
+                    model_embedings = pickle.load(f)
+            else:
+                raise FileNotFoundError('The specified embeddings is not present in the folder for pre-trained embeddings. Available embeddings are: '.join(os.listdir('embeddings')))
+        else:
+            model_embeddings = encode(transformer_name)
+        return model_embeddings
+
+
+    def train_transformer(self):
         """When we don't have a sentence transformer model already, we need to add one
 
         Args:
             transformer_name (str): name of the desired model
         """
-        transformer_model = SentenceTransformer(transformer_name)
-        return cls(transformer_name, transformer_load, transformer_model)
+        transformer_model = SentenceTransformer(self.transformer_name)
+        return transformer_model
+    
+    def encode(self, text_vec:pd.core.series.Series) -> np.ndarray:
+        """Create SBERT embeddings
+
+        Args:
+            pandas column: assume we're getting the text via a pandas column loaded from /data
+        Returns:
+            np.ndarray: embeddings
+        """
+        embeddings = self.transformer_embeddings.encode(text_vec)
 
     def write_transformer(self, transformer_name:str, transformer_model: SentenceTransformer | None)
         """
