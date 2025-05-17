@@ -72,22 +72,14 @@ class ces_sentencer:
     transformer_name: str
     transformer_load: bool
     transformer_model: SentenceTransformer | None
-    transformer_embeddings: np.ndarray | None
-    embeddings_load: bool
-    model_embedings: np.ndarray
 
 
-    def __init__(self, transformer_name: str, transformer_load: bool = True, embeddings_load: bool = True):
+
+    def __init__(self, transformer_name: str, transformer_load: bool = True):
         self.transformer_name = transformer_name
         self.transformer_load = transformer_load
         self.tranformer_model = load_transformer()
-        self.transformer_embeddings = load_em
-
-        self.vocab = vocab
-        self.merges = merges
-        if special_tokens is None:
-            special_tokens = []
-        self.rust_tokenizer = RustTokenizer(vocab, merges, special_tokens)
+        #self.transformer_embeddings = load_embeddings()
 
 
     def load_transformer(self):
@@ -108,7 +100,7 @@ class ces_sentencer:
         return transformer_model
 
 
-    def load_embeddings(self, transformer_name:str, embeddings_load:bool, embeddings_text:pd.core.series.Series):
+    def load_embeddings(self, embeddings_text:pd.core.series.Series):
         """Load or train embeddings
 
         Args:
@@ -118,11 +110,11 @@ class ces_sentencer:
         Returns:
             We're updating the embeddings object
         """
-        if embeddings_load:
-            out_path_embeddings = Path('embeddings/') / f'{transformer_name}.pkl'
+        if self.embeddings_load:
+            out_path_embeddings = Path('embeddings/') / f'{self.transformer_name}.pkl'
             if out_path_embeddings.is_file():
                 with open(out_path_embeddings , 'rb') as f:
-                    model_embedings = pickle.load(f)
+                    model_embeddings = pickle.load(f)
             else:
                 raise FileNotFoundError('The specified embeddings is not present in the folder for pre-trained embeddings. Available embeddings are: '.join(os.listdir('embeddings')))
         else:
