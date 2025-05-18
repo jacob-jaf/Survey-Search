@@ -71,13 +71,17 @@ ces_questions['question_only'].iloc[test_indices[0][range(680, 690)]]
 class ces_sentencer:
     transformer_name: str
     transformer_load: bool
-    transformer_model: SentenceTransformer | None
+    transformer_model: SentenceTransformer 
+    embedding_load: bool
+    embeddings: np.ndarray
 
 
 
-    def __init__(self, transformer_name: str, transformer_load: bool = True):
+
+    def __init__(self, transformer_name: str, transformer_load: bool = True, embedding_load: bool = True):
         self.transformer_name = transformer_name
         self.transformer_load = transformer_load
+        self.embedding_load = embedding_load
         self.tranformer_model = load_transformer()
         #self.transformer_embeddings = load_embeddings()
 
