@@ -176,3 +176,4 @@ cython_debug/
 #DO NOT INCLUDE DATA AND TOKENIZERS, TOO BIG
 /data
 /tokenizers
+/embeddings
