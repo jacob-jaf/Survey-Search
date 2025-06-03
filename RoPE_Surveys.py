@@ -174,7 +174,9 @@ class ces_sentencer:
             np.ndarray: The top k most similar strings from string_list_embedding
         """
         question_embeddings = self.encode(question_string)
+        print(f'Finished question_embeddings: {question_embeddings}' )
         similarities_to_question = self.transformer_model.similarity(question_embeddings, self.model_embeddings)
+        print(f'Finished similarities_to_question: {similarities_to_question}' )
         question_values, question_indices = torch.topk(similarities_to_question, top_a)
         return string_list_embedding.iloc[question_indices[0]].values
 
@@ -220,6 +222,10 @@ class ces_sentencer:
 ces_questions = pd.read_csv('data/ces_shiny_data_clean.csv')
 
 ces_model_class = ces_sentencer(embedding_load=False, string_list_embedding = ces_questions['question_only'])
+
+#ces_model_class2 = ces_sentencer()
+#ces_model_class2.closest_analysis('Senate?', 10, ces_questions['question_only'])
+
 #ces_model_class.write_embeddings()
 
 #ces_model_class.closest_analysis('What is the GDP of Colombia?', 5, ces_questions['question_only'])

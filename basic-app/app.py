@@ -7,10 +7,13 @@ from shiny import App, render, ui
 import pandas as pd
 from RoPE_Surveys import ces_sentencer
 
+# Set pandas display options to show full text
+pd.set_option('display.max_colwidth', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', None)
+
 # Load the CES questions data
 ces_questions = pd.read_csv('data/ces_shiny_data_clean.csv')
-
-
 
 # Initialize the semantic search model
 search_model = ces_sentencer()
