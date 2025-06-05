@@ -1,0 +1,20 @@
+# Ignore everything by default
+*
+
+# Include specific files and directories
+!app.py
+!RoPE_Surveys.py
+!requirements.txt
+!runtime.txt
+
+# Include specific directories and their contents
+!data/
+!data/ces_shiny_data_clean.csv
+!tokenizers/
+!tokenizers/all-MiniLM-L6-v2.pkl
+!embeddings/
+!embeddings/all-MiniLM-L6-v2.pkl
+
+# Ignore specific files in included directories
+data/*.csv
+!data/ces_shiny_data_clean.csv 
