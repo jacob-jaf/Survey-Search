@@ -3,101 +3,33 @@ from pathlib import Path
 import gc
 import os
 import warnings
-import time
+from shiny import App, render, ui
+import pandas as pd
+from RoPE_Surveys import ces_sentencer
 
 def log_info(message):
-    """Log message to both console and Shiny logs"""
+    """Log message for timing debugging, can be seen in shinyapps.io"""
     print(f"[INFO] {message}")
 
 def log_error(message):
-    """Log error to both console and Shiny logs"""
+    """Log error so it can be checked in shinyapps.io"""
     print(f"[ERROR] {message}")
-
-log_info("Starting imports...")
-start_time = time.time()
-
-# Import packages one by one to track timing
-log_info("Importing sys and pathlib...")
-from pathlib import Path
-import sys
-
-log_info("Importing gc and os...")
-import gc
-import os
-
-log_info("Importing warnings...")
-import warnings
-
-log_info("Importing shiny...")
-from shiny import App, render, ui
-
-log_info("Importing pandas...")
-import pandas as pd
-
-log_info("Importing RoPE_Surveys...")
-from RoPE_Surveys import ces_sentencer
-
-end_time = time.time()
-log_info(f"All imports completed in {end_time - start_time:.2f} seconds")
 
 # Get the absolute path of the current directory
 current_dir = Path(__file__).parent.absolute()
 # Add the current directory to Python path
 sys.path.append(str(current_dir))
 
-# Suppress specific warnings
+# There was approximately 1000s of these warnings just because we weren't using the default RStudio set up
 warnings.filterwarnings('ignore', message='Incomplete RStudio-Connect-App-Base-URL')
 
-def log_info(message):
-    """Log message to both console and Shiny logs"""
-    print(f"[INFO] {message}")
-
-def log_error(message):
-    """Log error to both console and Shiny logs"""
-    print(f"[ERROR] {message}")
-
-# Log environment information
-log_info("=== Deployment Environment Check ===")
-log_info(f"Current directory: {current_dir}")
-log_info(f"Python version: {sys.version}")
-log_info(f"Working directory contents: {os.listdir(current_dir)}")
-
-# Check for required directories and files
-tokenizers_dir = current_dir / 'tokenizers'
-embeddings_dir = current_dir / 'embeddings'
-data_dir = current_dir / 'data'
-
-# Check directories
-for dir_name, dir_path in [
-    ("Tokenizers", tokenizers_dir),
-    ("Embeddings", embeddings_dir),
-    ("Data", data_dir)
-]:
-    log_info(f"\n{dir_name} directory:")
-    log_info(f"Path: {dir_path}")
-    log_info(f"Exists: {dir_path.exists()}")
-    if dir_path.exists():
-        log_info(f"Contents: {os.listdir(dir_path)}")
-        # Check for specific files
-        if dir_name == "Tokenizers":
-            model_file = dir_path / "all-MiniLM-L6-v2.pkl"
-            log_info(f"Model file exists: {model_file.exists()}")
-        elif dir_name == "Embeddings":
-            embeddings_file = dir_path / "all-MiniLM-L6-v2.pkl"
-            log_info(f"Embeddings file exists: {embeddings_file.exists()}")
-        elif dir_name == "Data":
-            data_file = dir_path / "ces_shiny_data_clean.csv"
-            log_info(f"Data file exists: {data_file.exists()}")
-
-log_info("\n=== End of Environment Check ===\n")
-
-# Set pandas display options to show full text
+# Set pandas display options to show full text in search
 pd.set_option('display.max_colwidth', None)
 pd.set_option('display.max_rows', None)
 pd.set_option('display.width', None)
 
 try:
-    # Load the CES questions data using absolute path
+    # Load the cleaned CES questions data 
     data_path = current_dir / 'data' / 'ces_shiny_data_clean.csv'
     log_info(f"Loading data from {data_path}")
     ces_questions = pd.read_csv(data_path)
@@ -107,32 +39,55 @@ except Exception as e:
     raise
 
 # Initialize search model as None - will be loaded on first use
+# This saves time on search
 search_model = None
 
 def initialize_model():
     """Initialize the search model with the CES questions data"""
     try:
         log_info("Initializing model")
+        #The defauls behavior is for loading to be true, but we're making double sure that this is loaded to save time
         model = ces_sentencer(
-            transformer_load=True,  # Load from saved file
-            embedding_load=True,    # Load from saved file
+            transformer_load=True,  
+            embedding_load=True,    
             string_list_embedding=ces_questions['question_only']
         )
-        log_info("Model initialized successfully")
+        log_info("Model initialized without error")
         return model
     except Exception as e:
         log_error(f"Error initializing model: {str(e)}")
         raise
 
+#We need a fluid page to adjust for browser windows of difference sizes
 app_ui = ui.page_fluid(
+    #Initializing a level 2 size heading (subheading size) for website title
     ui.h2("CES Survey Question Search"),
+    #Need a search term and a number of results to return
     ui.input_text("search_term", "Enter your question:"),
+    #Technically, there is no more compute time for more results
+        #we include a number because at a certain point results become fairly meaningless
+        #we include a max number just for defensive programming
+        #if user is a subject matter expert, they should know ahead of time around how many results is reasonable
     ui.input_numeric("num_results", "Number of results:", value=5, min=1, max=20),
     ui.input_action_button("search_button", "Search"),
+    #A table gives us the option to display desirable metadata
     ui.output_table("search_results"),
 )
 
-def server(input, output, session):
+def server(input, output):
+    """This function defines the actual website
+
+    Args:
+        input (ShinySession): Describes the input received once the user actually presses search. Reactive container
+        output (ShinySession): The data we want to send back that the user views as a render.table
+        No real point in specifying type in function definition as all parameters always have to be special ShinySession objects
+        We are not tracking session specific data and are therefore not passing any session specific parameters
+
+    Returns:
+       Set up the function to first "return" the default message, which just prompts a user for input
+       Then it will return a pandas DataFrame with search output if there's input to the search button
+       Since our search bar/output render.table is reactive, this works
+    """
     global search_model
     
     def load_model():
@@ -141,6 +96,7 @@ def server(input, output, session):
             try:
                 search_model = initialize_model()
                 # Force garbage collection after model loading
+                # Likely unnecessary, but this is an extremely memory hungry application, so every little bit may count
                 gc.collect()
                 log_info("Model loaded successfully")
             except Exception as e:
@@ -153,17 +109,17 @@ def server(input, output, session):
     def search_results():
         if input.search_button():
             try:
-                # Load model only when needed
+                # Load model only when needed, again we want to optimize memory usage as much as possible
                 model = load_model()
                 
-                # Get the most similar questions
+                # Get the most similar questions based on semantic similarity to saved embeddings for CES questions
                 similar_questions = model.closest_analysis(
                     input.search_term(),
                     input.num_results(),
                     ces_questions['question_only']
                 )
                 
-                # Get the indices of the similar questions
+                # Find which questions correspond to closest embeddings to encoded question
                 similar_indices = ces_questions[ces_questions['question_only'].isin(similar_questions)].index
                 
                 # Create a DataFrame with the results
@@ -176,22 +132,13 @@ def server(input, output, session):
                     'Identical Versions': [ces_questions.iloc[idx]['duplicate_metadata'] for idx in similar_indices]
                 })
                 
-                # Clear memory after processing
                 gc.collect()
                 
                 return results_df
             except Exception as e:
                 log_error(f"Error in search_results: {str(e)}")
                 return pd.DataFrame({'Error': [str(e)]})
-        return pd.DataFrame({'Message': ['Enter a question and click Search to find similar questions.']})
+        return pd.DataFrame({'Message': ['Enter a question and click Search to find similar CES questions.']})
 
 # Create the Shiny app
 app = App(app_ui, server)
-
-if __name__ == "__main__":
-    try:
-        log_info("Starting Shiny app")
-        app.run(host="127.0.0.1", port=8000)
-    except Exception as e:
-        log_error(f"Error running app: {str(e)}")
-        raise
