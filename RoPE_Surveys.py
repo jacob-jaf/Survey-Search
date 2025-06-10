@@ -7,42 +7,7 @@ import pickle
 from sklearn.metrics.pairwise import cosine_similarity
 import gc
 
-#os.path.dirname(os.path.abspath(__file__))
-#Path(__name__).resolve()
-# tokenizer = AutoTokenizer.from_pretrained("junnyu/roformer_chinese_base")
-# model = RoFormerModel.from_pretrained("junnyu/roformer_chinese_base")
 
-# inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-# outputs = model(**inputs)
-
-# last_hidden_states = outputs.last_hidden_states
-
-# with open('tokenizers/paraphrase-mpnet-base-v2.pkl', 'wb') as file:
-#     pickle.dump(ces_model, file)
-
-# start1 = time.time()
-# with open('tokenizers/paraphrase-mpnet-base-v2.pkl' , 'rb') as f:
-#     ces1 = pickle.load(f) 
-# end1 = time.time()
-
-# start2 = time.time()
-# ces2 = SentenceTransformer('paraphrase-mpnet-base-v2')
-# end2 = time.time()
-
-# print(f'pickle took {end1 - start1} seconds')
-# print(f'SentenceTransformer took {end2 - start2} seconds')
-
-
-
-
-
-
-##########
-# ces_questions_raw = pd.read_csv(
-#     'data/ces_shiny_data.csv'
-# )
-#ces_questions['question_only'] = ces_questions['Text'].str.split('<').str[0]
-#ces_questions = ces_questions.drop_duplicates('question_only').reset_index(drop=True)
 
 
 
@@ -57,8 +22,19 @@ def var_checker(var) -> bool:
         var_exists = True
     return var_exists
 
-def top_k_indices_heapq(array, k):
-    return [index for index, _ in heapq.nlargest(k, enumerate(array), key=lambda x: x[1])]
+def top_k_indices(array, k):
+    """Get indices of k largest values in array using NumPy's argpartition.
+    
+    Args:
+        array: Input array
+        k: Number of largest values to find
+        
+    Returns:
+        List of indices corresponding to k largest values
+    """
+    # Use argpartition to get indices of k largest values
+    # The -k means we want the k largest values
+    return np.argpartition(array, -k)[-k:][::-1]
 
 
 class ces_sentencer:
@@ -151,8 +127,8 @@ class ces_sentencer:
             
             similarities = np.array(all_similarities)
         
-        # Get indices of top n similar questions
-        top_n_idx = np.argsort(similarities)[-n:][::-1]
+        # Get indices of top n similar questions using the optimized function
+        top_n_idx = top_k_indices(similarities, n)
         
         # Get the most similar questions
         similar_questions = [questions_list[idx] for idx in top_n_idx]
@@ -176,31 +152,6 @@ class ces_sentencer:
             pickle.dump(self.model_embeddings, f)
 
 
-#with open('embeddings/paraphrase-mpnet-base-v2.pkl', 'wb') as f:
-#    pickle.dump(ces_embeddings, f)
-
-# ces_model = SentenceTransformer('paraphrase-mpnet-base-v2')
-# ces_embeddings = ces_model.encode(ces_questions['question_only'])
-# ces_similarities = ces_model.similarity(ces_embeddings, ces_embeddings)
-# ces_similarities.fill_diagonal_(float('-inf'))
-# ces_max_values, ces_max_indices = torch.max(ces_similarities, dim=1)
-# ces_dict = dict(zip(ces_questions['question_only'], ces_questions['question_only'].iloc[ces_max_indices] ))
-
-# #list(ces_dict.items())
-
-# test_string = 'What is the GDP of  Afghanistan?'
-# test_embedding = ces_model.encode(test_string)
-# test_similarities = ces_model.similarity(test_embedding, ces_embeddings)
-# test_max, test_index = torch.max(test_similarities, dim=1)
-# ces_questions['question_only'].iloc[test_index]
-
-# test_sort, test_indices = torch.sort(test_similarities, descending=True)
-# test_matches = ces_questions['question_only'].iloc[test_indices[0]].values
-# #reset_index()
-# ces_questions[ces_questions['Topic'] == 'Foreign policy']
-# np.where(test_indices[0] == 2424)
-# ces_questions['question_only'].iloc[test_indices[0][range(680, 690)]]
-#should need 0 arguments to get this class to work out of the box
 
 #ces_questions = pd.read_csv('data/ces_shiny_data_clean.csv')
 
@@ -211,6 +162,5 @@ class ces_sentencer:
 
 #ces_model_class2.closest_analysis('Senate?', 10, ces_questions['question_only'])
 
-#ces_model_class.write_embeddings()
 
 #ces_model_class.closest_analysis('What is the GDP of Colombia?', 5, ces_questions['question_only'])
