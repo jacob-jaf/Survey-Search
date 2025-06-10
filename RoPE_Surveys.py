@@ -6,6 +6,7 @@ import numpy as np
 import pickle
 from sklearn.metrics.pairwise import cosine_similarity
 import gc
+import os
 
 
 
@@ -46,7 +47,12 @@ class ces_sentencer:
         self.embeddings_loaded = False
         
         # Set up paths
-        self.current_dir = Path(__file__).parent.absolute()
+        try:
+            self.current_dir = Path(__file__).parent.absolute()
+        except NameError:
+            # If __file__ is not defined, use the current working directory
+            self.current_dir = Path(os.getcwd())
+            
         self.tokenizers_dir = self.current_dir / 'tokenizers'
         self.embeddings_dir = self.current_dir / 'embeddings'
         
@@ -62,9 +68,9 @@ class ces_sentencer:
                     self.transformer = pickle.load(f)
             else:
                 self.transformer = SentenceTransformer('all-MiniLM-L6-v2')
-                # Save the model for future use
                 with open(model_path, 'wb') as f:
                     pickle.dump(self.transformer, f)
+            
             # Move model to CPU and set to eval mode
             self.transformer = self.transformer.to('cpu')
             self.transformer.eval()
@@ -81,11 +87,20 @@ class ces_sentencer:
                 with open(embeddings_path, 'rb') as f:
                     self.embeddings = pickle.load(f)
             else:
-                # Generate embeddings
-                self.embeddings = self.transformer.encode(string_list.tolist(), show_progress_bar=True)
-                # Save embeddings for future use
+                # Process in smaller batches to manage memory
+                batch_size = 32
+                all_embeddings = []
+                
+                for i in range(0, len(string_list), batch_size):
+                    batch = string_list[i:i + batch_size]
+                    batch_embeddings = self.transformer.encode(batch.tolist(), show_progress_bar=False)
+                    all_embeddings.append(batch_embeddings)
+                    gc.collect()  # Clear memory after each batch
+                
+                self.embeddings = np.vstack(all_embeddings)
                 with open(embeddings_path, 'wb') as f:
                     pickle.dump(self.embeddings, f)
+            
             self.embeddings_loaded = True
 
     def closest_analysis(self, query, n, questions):
@@ -101,13 +116,12 @@ class ces_sentencer:
         
         # If we have pre-computed embeddings, use them
         if self.embeddings_loaded:
-            # Calculate similarities using pre-computed embeddings
             similarities = np.dot(self.embeddings, query_embedding) / (
                 np.linalg.norm(self.embeddings, axis=1) * np.linalg.norm(query_embedding)
             )
         else:
             # Process in batches to manage memory
-            batch_size = 1000
+            batch_size = 32
             all_similarities = []
             
             for i in range(0, len(questions_list), batch_size):
@@ -127,7 +141,7 @@ class ces_sentencer:
             
             similarities = np.array(all_similarities)
         
-        # Get indices of top n similar questions using the optimized function
+        # Get indices of top n similar questions
         top_n_idx = top_k_indices(similarities, n)
         
         # Get the most similar questions
@@ -153,6 +167,7 @@ class ces_sentencer:
 
 
 
+# Load the data first
 #ces_questions = pd.read_csv('data/ces_shiny_data_clean.csv')
 
 # ces_model_class = ces_sentencer(transformer_load=False, embedding_load=False, string_list_embedding=ces_questions['question_only'])
@@ -160,7 +175,9 @@ class ces_sentencer:
 # #current_dir = Path(__file__).parent.absolute()
 
 
+#ces_model_class2 = ces_sentencer()
 #ces_model_class2.closest_analysis('Senate?', 10, ces_questions['question_only'])
 
 
 #ces_model_class.closest_analysis('What is the GDP of Colombia?', 5, ces_questions['question_only'])
+
